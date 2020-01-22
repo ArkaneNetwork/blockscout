@@ -105,4 +105,68 @@ defmodule Explorer.SmartContract.Verifier.ConstructorArguments do
 
     extract_constructor_arguments(creation_code, check_func)
   end
+
+  def extract_require_messages_from_constructor(contract_source_code) do
+    constructor = find_constructor_content(contract_source_code)
+    require_contents = find_require_in_constructor(constructor)
+
+    messages_list =
+      Enum.reduce(require_contents, [], fn require_content, msgs ->
+        msg = get_require_message_hex(require_content)
+        if msg, do: msgs ++ [msg]
+      end)
+
+    if messages_list, do: messages_list, else: []
+  end
+
+  def find_constructor_content(contract_source_code) do
+    case String.split(contract_source_code, "constructor", parts: 2) do
+      [_, right_from_contstructor] ->
+        case String.split(right_from_contstructor, "{", parts: 2) do
+          [_, right_from_contstructor_inside] ->
+            case String.split(right_from_contstructor_inside, "}", parts: 2) do
+              [constructor, _] ->
+                constructor
+
+              [_] ->
+                nil
+            end
+
+          [_] ->
+            nil
+        end
+
+      [_] ->
+        nil
+    end
+  end
+
+  def find_require_in_constructor(constructor) do
+    if constructor do
+      [_ | requires] = String.split(constructor, "require")
+
+      Enum.reduce(requires, [], fn right_from_require, requires_list ->
+        [_ | [right_from_require_inside]] = String.split(right_from_require, "(", parts: 2)
+        [require_content | _] = String.split(right_from_require_inside, ");", parts: 2)
+        requires_list ++ [require_content]
+      end)
+    else
+      []
+    end
+  end
+
+  def get_require_message_hex(require_content) do
+    case String.split(require_content, ",", parts: 2) do
+      [_ | [msg]] ->
+        String.trim(msg)
+        |> String.trim_leading("\"")
+        |> String.trim_trailing("\"")
+        |> String.trim_leading("'")
+        |> String.trim_trailing("'")
+        |> Base.encode16(case: :lower)
+
+      [_] ->
+        nil
+    end
+  end
 end

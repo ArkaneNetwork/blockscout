@@ -66,5 +66,157 @@ defmodule Explorer.SmartContract.Verifier.ConstructorArgumentsTest do
 
       assert ConstructorArguments.verify(address.hash, source_code, constructor_arguments)
     end
+
+    test "get require messages from constructor" do
+      contract_source_code = """
+      pragma solidity 0.6.1;
+
+
+      contract HomeBridge {
+          uint public validatorsRequiredPercent;
+
+          constructor(address _proxy, uint256 _validatorsRequiredPercent) public {
+              require       (
+                  address(_proxy) != address(0),
+
+
+
+                  "proxy must not be the zero address!"
+              );
+
+
+              require(
+                  _validatorsRequiredPercent >= 0 &&
+                      _validatorsRequiredPercent <= 100,
+                  "_validatorsRequiredPercent must be between 0 and 100"
+              );
+              validatorsRequiredPercent = _validatorsRequiredPercent;
+          }
+      }
+      """
+
+      result = ConstructorArguments.extract_require_messages_from_constructor(contract_source_code)
+
+      assert result == [
+               "70726f7879206d757374206e6f7420626520746865207a65726f206164647265737321",
+               "5f76616c696461746f7273526571756972656450657263656e74206d757374206265206265747765656e203020616e6420313030"
+             ]
+    end
+
+    test "get require messages with a single quote from constructor" do
+      contract_source_code = """
+      pragma solidity 0.6.1;
+
+
+      contract HomeBridge {
+          uint public validatorsRequiredPercent;
+
+          constructor(address _proxy, uint256 _validatorsRequiredPercent) public {
+
+
+              require(
+                  _validatorsRequiredPercent >= 0 &&
+                      _validatorsRequiredPercent <= 100,
+                  '_validatorsRequiredPercent must be between 0 and 100'
+              );
+              validatorsRequiredPercent = _validatorsRequiredPercent;
+          }
+      }
+      """
+
+      result = ConstructorArguments.extract_require_messages_from_constructor(contract_source_code)
+
+      assert result == [
+               "5f76616c696461746f7273526571756972656450657263656e74206d757374206265206265747765656e203020616e6420313030"
+             ]
+    end
+
+    test "get require messages with different quotes inside from constructor" do
+      contract_source_code = """
+      pragma solidity 0.6.1;
+
+
+      contract HomeBridge {
+          uint public validatorsRequiredPercent;
+
+          constructor(uint256 _validatorsRequiredPercent) public {
+
+
+              require(
+                  _validatorsRequiredPercent >= 0 &&
+                      _validatorsRequiredPercent <= 100,
+                  "_val\"idatorsReq'uiredPercent must be ' between \" 0 and 100"
+              );
+              validatorsRequiredPercent = _validatorsRequiredPercent;
+          }
+      }
+      """
+
+      result = ConstructorArguments.extract_require_messages_from_constructor(contract_source_code)
+
+      assert result == [
+               "5f76616c22696461746f727352657127756972656450657263656e74206d7573742062652027206265747765656e2022203020616e6420313030"
+             ]
+    end
+
+    test "get empty require messages from constructor with require without message" do
+      contract_source_code = """
+      pragma solidity 0.6.1;
+
+
+      contract HomeBridge {
+          uint public validatorsRequiredPercent;
+
+          constructor(uint256 _validatorsRequiredPercent) public {
+
+
+              require(
+                  _validatorsRequiredPercent >= 0 &&
+                      _validatorsRequiredPercent <= 100
+              );
+              validatorsRequiredPercent = _validatorsRequiredPercent;
+          }
+      }
+      """
+
+      result = ConstructorArguments.extract_require_messages_from_constructor(contract_source_code)
+
+      assert result == []
+    end
+
+    test "get empty require messages from constructor" do
+      contract_source_code = """
+      pragma solidity 0.6.1;
+
+
+      contract HomeBridge {
+          uint public validatorsRequiredPercent;
+
+          constructor(address _proxy, uint256 _validatorsRequiredPercent) public {
+              validatorsRequiredPercent = _validatorsRequiredPercent;
+          }
+      }
+      """
+
+      result = ConstructorArguments.extract_require_messages_from_constructor(contract_source_code)
+
+      assert result == []
+    end
+  end
+
+  test "get empty require messages if no constructor" do
+    contract_source_code = """
+    pragma solidity 0.6.1;
+
+
+    contract HomeBridge {
+        uint public validatorsRequiredPercent;
+
+    }
+    """
+
+    result = ConstructorArguments.extract_require_messages_from_constructor(contract_source_code)
+
+    assert result == []
   end
 end
