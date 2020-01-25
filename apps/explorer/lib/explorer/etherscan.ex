@@ -313,7 +313,17 @@ defmodule Explorer.Etherscan do
         }
       )
 
-    Repo.all(query)
+    query
+    |> Repo.all()
+    |> Enum.map(fn %{type: type, balance: balance, contract_address_hash: token_hash} = token ->
+      if type == "ERC-721" do
+        token_instances = Chain.find_erc721_token_instances(address_hash, token_hash, balance)
+
+        Map.put(token, :tokens, token_instances)
+      else
+        token
+      end
+    end)
   end
 
   @transaction_fields ~w(
