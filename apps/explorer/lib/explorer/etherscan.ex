@@ -316,21 +316,36 @@ defmodule Explorer.Etherscan do
     query
     |> Repo.all()
     |> Enum.map(fn %{type: type, balance: balance, contract_address_hash: token_hash} = token ->
-      if type == "ERC-721" do
-        token_instances =
-          address_hash
-          |> Chain.find_erc721_token_instances(token_hash, Decimal.to_integer(balance))
-          |> Enum.map(fn %{token_id: token_id} ->
-            %{
-              token_id: token_id,
-              fungible: false,
-              balance: 1
-            }
-          end)
+      Task.async(fn ->
+        if type == "ERC-721" do
+          token_instances =
+            address_hash
+            |> Chain.find_erc721_token_instances(token_hash, Decimal.to_integer(balance))
+            |> Enum.map(fn %{token_id: token_id} ->
+              %{
+                token_id: token_id,
+                fungible: false,
+                balance: 1
+              }
+            end)
 
-        Map.put(token, :tokens, token_instances)
-      else
-        token
+          Map.put(token, :tokens, token_instances)
+        else
+          token
+        end
+      end)
+    end)
+    |> Task.yield_many(:timer.seconds(60))
+    |> Enum.map(fn {_task, res} ->
+      case res do
+        {:ok, result} ->
+          result
+
+        {:exit, reason} ->
+          raise "Query fetching token instances terminated: #{inspect(reason)}"
+
+        nil ->
+          raise "Query fetching token instances timed out."
       end
     end)
   end
