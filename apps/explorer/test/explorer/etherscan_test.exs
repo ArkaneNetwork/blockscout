@@ -1517,6 +1517,60 @@ defmodule Explorer.EtherscanTest do
       assert token_list == expected_tokens
     end
 
+    test "return ERC-721 token instances" do
+      address = insert(:address)
+      erc721_token = insert(:token, type: "ERC-721")
+      erc20_token = insert(:token, type: "ERC-20")
+
+      token_balance_details1 = %{
+        address: address,
+        token_contract_address_hash: erc721_token.contract_address.hash,
+        block_number: 2,
+        value: 1
+      }
+
+      token_balance_details2 = %{
+        address: address,
+        token_contract_address_hash: erc20_token.contract_address.hash,
+        block_number: 2
+      }
+
+      token_balance1 = insert(:token_balance, token_balance_details1) |> Repo.preload(:token)
+      token_balance2 = insert(:token_balance, token_balance_details2) |> Repo.preload(:token)
+
+      token_transfer =
+        insert(:token_transfer,
+          token_id: 5,
+          token_contract_address: erc721_token.contract_address,
+          to_address: address,
+          transaction: insert(:transaction)
+        )
+
+      result = Etherscan.list_tokens(address.hash)
+
+      expected_result = [
+        %{
+          balance: token_balance1.value,
+          contract_address_hash: token_balance1.token_contract_address_hash,
+          name: token_balance1.token.name,
+          decimals: token_balance1.token.decimals,
+          symbol: token_balance1.token.symbol,
+          tokens: [%{balance: 1, fungible: false, token_id: token_transfer.token_id}],
+          type: token_balance1.token.type
+        },
+        %{
+          balance: token_balance2.value,
+          contract_address_hash: token_balance2.token_contract_address_hash,
+          name: token_balance2.token.name,
+          decimals: token_balance2.token.decimals,
+          symbol: token_balance2.token.symbol,
+          type: token_balance2.token.type
+        }
+      ]
+
+      assert result == expected_result
+    end
+
     test "returns an empty list when there are no token balances" do
       address = insert(:address)
 

@@ -3417,16 +3417,29 @@ defmodule Explorer.Chain do
     Repo.one!(query)
   end
 
-
+  @spec find_erc721_token_instances(Hash.Address.t(), Hash.Address.t(), integer()) :: [TokenTransfer.t()]
   def find_erc721_token_instances(address_hash, token_hash, value) do
-    query = from(to_tt in TokenTransfer,
-      inner_join: from_tt in TokenTransfer,
-      on: from_tt.token_contract_address_hash == to_tt.token_contract_address_hash,
-      where: (to_tt.token_contract_address_hash == ^token_hash and to_tt.to_address_hash == ^address_hash) and
-        (to_tt.block_number > from_tt.block_number or is_nil(from_tt)),
-      limit: ^value,
-      order_by: [desc: to_tt.block_number]
-    )
+    query1 =
+      from(to_tt in TokenTransfer,
+        where: to_tt.token_contract_address_hash == ^token_hash and to_tt.to_address_hash == ^address_hash,
+        order_by: [desc: to_tt.block_number],
+        distinct: :token_id
+      )
+
+    query2 =
+      from(from_tt in TokenTransfer,
+        where: from_tt.token_contract_address_hash == ^token_hash and from_tt.from_address_hash == ^address_hash,
+        order_by: [desc: from_tt.block_number],
+        distinct: :token_id
+      )
+
+    query =
+      from(to_tt in query1,
+        left_join: from_tt in subquery(query2),
+        on: to_tt.token_id == from_tt.token_id,
+        where: to_tt.block_number > from_tt.block_number or is_nil(from_tt.token_id),
+        limit: ^value
+      )
 
     Repo.all(query)
   end
