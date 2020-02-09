@@ -131,6 +131,47 @@ defmodule Indexer.Transform.TokenTransfersTest do
       assert TokenTransfers.parse([log]) == expected
     end
 
+    test "parses erc1155 token transfer" do
+      log = %{
+        address_hash: "0x58Ab73CB79c8275628E0213742a85B163fE0A9Fb",
+        block_number: 8_683_457,
+        data:
+          "0x1000000000000c520000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+        first_topic: "0xc3d58168c5ae7397731d063d5bbf3d657854427343f4c083240f7aacaa2d0f62",
+        secon_topic: "0x0000000000000000000000009c978f4cfa1fe13406bcc05baf26a35716f881dd",
+        third_topic: "0x0000000000000000000000009c978f4cfa1fe13406bcc05baf26a35716f881dd",
+        fourth_topic: "0x0000000000000000000000009c978f4cfa1fe13406bcc05baf26a35716f881dd",
+        index: 2,
+        transaction_hash: "0x6d2dd62c178e55a13b65601f227c4ffdd8aa4e3bcb1f24731363b4f7619e92c8",
+        block_hash: "0x79594150677f083756a37eee7b97ed99ab071f502104332cb3835bac345711ca",
+        type: "mined"
+      }
+
+      assert TokenTransfers.parse([log]) == %{
+               token_transfers: [
+                 %{
+                   amount: 1,
+                   block_hash: "0x79594150677f083756a37eee7b97ed99ab071f502104332cb3835bac345711ca",
+                   block_number: 8_683_457,
+                   from_address_hash: "0x9c978f4cfa1fe13406bcc05baf26a35716f881dd",
+                   log_index: 2,
+                   to_address_hash: "0x9c978f4cfa1fe13406bcc05baf26a35716f881dd",
+                   token_contract_address_hash: "0x58Ab73CB79c8275628E0213742a85B163fE0A9Fb",
+                   token_id:
+                     7_237_005_577_332_282_011_952_059_972_634_123_378_909_214_838_582_411_639_295_170_840_059_424_276_480,
+                   token_type: "ERC-1155",
+                   transaction_hash: "0x6d2dd62c178e55a13b65601f227c4ffdd8aa4e3bcb1f24731363b4f7619e92c8"
+                 }
+               ],
+               tokens: [
+                 %{
+                   contract_address_hash: "0x58Ab73CB79c8275628E0213742a85B163fE0A9Fb",
+                   type: "ERC-1155"
+                 }
+               ]
+             }
+    end
+
     test "logs error with unrecognized token transfer format" do
       log = %{
         address_hash: "0x58Ab73CB79c8275628E0213742a85B163fE0A9Fb",
