@@ -301,7 +301,7 @@ defmodule Explorer.Etherscan do
         tb in TokenBalance,
         inner_join: t in assoc(tb, :token),
         where: tb.address_hash == ^address_hash,
-        distinct: :token_contract_address_hash,
+        distinct: [:token_contract_address_hash, :token_id],
         order_by: [desc: :block_number],
         select: %{
           balance: tb.value,

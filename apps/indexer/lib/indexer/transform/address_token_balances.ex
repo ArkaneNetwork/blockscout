@@ -19,13 +19,23 @@ defmodule Indexer.Transform.AddressTokenBalances do
                                  token_contract_address_hash: token_contract_address_hash,
                                  token_id: token_id,
                                  token_type: token_type
-                               },
+                               } = params,
                                acc
                                when is_integer(block_number) and is_binary(from_address_hash) and
                                       is_binary(to_address_hash) and is_binary(token_contract_address_hash) ->
-      acc
-      |> add_token_balance_address(from_address_hash, token_contract_address_hash, token_id, token_type, block_number)
-      |> add_token_balance_address(to_address_hash, token_contract_address_hash, token_id, token_type, block_number)
+      if params[:token_ids] && token_type == "ERC-1155" do
+        params[:token_ids]
+        |> Enum.reduce(acc, fn id, sub_acc ->
+          sub_acc
+          |> add_token_balance_address(from_address_hash, token_contract_address_hash, id, token_type, block_number)
+          |> add_token_balance_address(to_address_hash, token_contract_address_hash, id, token_type, block_number)
+        end)
+        |> IO.inspect()
+      else
+        acc
+        |> add_token_balance_address(from_address_hash, token_contract_address_hash, token_id, token_type, block_number)
+        |> add_token_balance_address(to_address_hash, token_contract_address_hash, token_id, token_type, block_number)
+      end
     end)
   end
 
