@@ -59,7 +59,7 @@ defmodule Explorer.Chain.Address.TokenBalance do
   end
 
   @optional_fields ~w(value value_fetched_at token_id)a
-  @required_fields ~w(address_hash block_number token_contract_address_hash)a
+  @required_fields ~w(address_hash block_number token_contract_address_hash token_type)a
   @allowed_fields @optional_fields ++ @required_fields
 
   @doc false
