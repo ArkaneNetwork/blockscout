@@ -3,12 +3,16 @@ defmodule Explorer.Etherscan do
   The etherscan context.
   """
 
+  use Bitwise
+
   import Ecto.Query, only: [from: 2, where: 3, or_where: 3, union: 2]
 
   alias Explorer.Etherscan.Logs
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Address.TokenBalance
   alias Explorer.Chain.{Block, Hash, InternalTransaction, TokenTransfer, Transaction}
+
+  @nf_bit 1 <<< 255
 
   @default_options %{
     order_by_direction: :desc,
@@ -309,7 +313,8 @@ defmodule Explorer.Etherscan do
           name: t.name,
           decimals: t.decimals,
           symbol: t.symbol,
-          type: t.type
+          type: t.type,
+          token_id: tb.token_id
         }
       )
 
@@ -317,21 +322,38 @@ defmodule Explorer.Etherscan do
     |> Repo.all()
     |> Enum.map(fn %{type: type, balance: balance, contract_address_hash: token_hash} = token ->
       Task.async(fn ->
-        if type == "ERC-721" do
-          token_instances =
-            address_hash
-            |> Chain.find_erc721_token_instances(token_hash, Decimal.to_integer(balance))
-            |> Enum.map(fn %{token_id: token_id} ->
-              %{
-                token_id: token_id,
-                fungible: false,
-                balance: 1
-              }
-            end)
+        case type do
+          "ERC-721" ->
+            token_instances =
+              address_hash
+              |> Chain.find_erc721_token_instances(token_hash, Decimal.to_integer(balance))
+              |> Enum.map(fn %{token_id: token_id} ->
+                %{
+                  token_id: token_id,
+                  fungible: false,
+                  balance: 1
+                }
+              end)
 
-          Map.put(token, :tokens, token_instances)
-        else
-          token
+            Map.put(token, :tokens, token_instances)
+
+          "ERC-1155" ->
+            if (Decimal.to_integer(token.token_id) &&& @nf_bit) == 0 do
+              %{
+                token_id: token.token_id,
+                fungible: true,
+                balance: token.balance
+              }
+            else
+              %{
+                token_id: token.token_id,
+                fungible: false,
+                balance: token.balance
+              }
+            end
+
+          _ ->
+            token
         end
       end)
     end)

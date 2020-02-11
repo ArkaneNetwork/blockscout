@@ -170,6 +170,7 @@ defmodule Indexer.Transform.TokenTransfers do
     [token_id, value] = decode_data(data, [{:uint, 256}, {:uint, 256}])
 
     token_transfer = %{
+      amount: value,
       block_number: log.block_number,
       block_hash: log.block_hash,
       log_index: log.index,
@@ -178,8 +179,7 @@ defmodule Indexer.Transform.TokenTransfers do
       token_contract_address_hash: log.address_hash,
       transaction_hash: log.transaction_hash,
       token_type: "ERC-1155",
-      token_id: token_id,
-      amount: value
+      token_id: token_id
     }
 
     token = %{

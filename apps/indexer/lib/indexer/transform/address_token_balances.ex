@@ -30,7 +30,6 @@ defmodule Indexer.Transform.AddressTokenBalances do
           |> add_token_balance_address(from_address_hash, token_contract_address_hash, id, token_type, block_number)
           |> add_token_balance_address(to_address_hash, token_contract_address_hash, id, token_type, block_number)
         end)
-        |> IO.inspect()
       else
         acc
         |> add_token_balance_address(from_address_hash, token_contract_address_hash, token_id, token_type, block_number)
