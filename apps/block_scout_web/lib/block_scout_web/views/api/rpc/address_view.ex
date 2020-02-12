@@ -170,13 +170,25 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
 
   defp prepare_token(token) do
     result = %{
-      "balance" => to_string(token.balance),
-      "contractAddress" => to_string(token.contract_address_hash),
       "name" => token.name,
       "decimals" => to_string(token.decimals),
       "symbol" => token.symbol,
       "type" => token.type
     }
+
+    result =
+      if Map.get(token, :contract_address_hash) do
+        Map.put(result, :contractAddress, to_string(token.contract_address_hash))
+      else
+        result
+      end
+
+    result =
+      if Map.get(token, :balance) do
+        Map.put(result, :balance, to_string(token.balance))
+      else
+        result
+      end
 
     if Map.get(token, :tokens) do
       Map.put(result, :tokens, token.tokens)

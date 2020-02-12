@@ -339,18 +339,23 @@ defmodule Explorer.Etherscan do
 
           "ERC-1155" ->
             if (Decimal.to_integer(token.token_id) &&& @nf_bit) == 0 do
-              %{
-                token_id: token.token_id,
-                fungible: true,
-                balance: token.balance
-              }
+              Map.put(token, :tokens, [
+                %{
+                  token_id: token.token_id,
+                  fungible: true,
+                  balance: token.balance
+                }
+              ])
             else
-              %{
-                token_id: token.token_id,
-                fungible: false,
-                balance: token.balance
-              }
+              Map.put(token, :tokens, [
+                %{
+                  token_id: token.token_id,
+                  fungible: false,
+                  balance: token.balance
+                }
+              ])
             end
+            |> Map.drop([:balance, :token_id])
 
           _ ->
             token
@@ -368,6 +373,23 @@ defmodule Explorer.Etherscan do
 
         nil ->
           raise "Query fetching token instances timed out."
+      end
+    end)
+    |> Enum.group_by(fn balance ->
+      balance.contract_address_hash
+    end)
+    |> Enum.map(fn {_key, values} ->
+      token_info = Enum.at(values, 0)
+
+      tokens =
+        Enum.reduce(values, [], fn value, acc ->
+          (value.tokens || []) ++ acc
+        end)
+
+      if Enum.empty?(tokens) do
+        token_info
+      else
+        Map.put(token_info, :tokens, tokens)
       end
     end)
   end
