@@ -481,8 +481,8 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
       repo.insert_all(
         Address.CurrentTokenBalance,
         ordered_current_token_balance,
-        # No `ON CONFLICT` because `delete_address_current_token_balances`
-        # should have removed any conflicts.
+        on_conflict: :replace_all,
+        conflict_target: [:address_hash, :token_contract_address_hash],
         returning: [:address_hash, :token_contract_address_hash, :block_number, :value],
         timeout: timeout
       )
