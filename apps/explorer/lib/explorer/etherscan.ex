@@ -383,7 +383,7 @@ defmodule Explorer.Etherscan do
 
       tokens =
         Enum.reduce(values, [], fn value, acc ->
-          (value.tokens || []) ++ acc
+          (value[:tokens] || []) ++ acc
         end)
 
       if Enum.empty?(tokens) do
