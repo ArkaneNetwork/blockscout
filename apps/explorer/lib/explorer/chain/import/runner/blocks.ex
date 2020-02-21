@@ -426,7 +426,8 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
           token_contract_address_hash: address_token_balance.token_contract_address_hash,
           block_number: max(address_token_balance.block_number)
         },
-        group_by: [address_token_balance.address_hash, address_token_balance.token_contract_address_hash]
+        group_by: [address_token_balance.address_hash, address_token_balance.token_contract_address_hash, address_token_balance.token_id],
+        distinct: address_token_balance.token_id
       )
 
     final_query =
