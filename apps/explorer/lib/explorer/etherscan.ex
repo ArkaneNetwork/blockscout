@@ -331,11 +331,11 @@ defmodule Explorer.Etherscan do
                 %{
                   token_id: token_id,
                   fungible: false,
-                  balance: 1
+                  balance: "1"
                 }
               end)
 
-            Map.put(token, :tokens, token_instances)
+            Map.put(token, :tokens, token_instances) |> Map.drop([:balance])
 
           "ERC-1155" ->
             if (Decimal.to_integer(token.token_id) &&& @nf_bit) == 0 do
@@ -389,7 +389,8 @@ defmodule Explorer.Etherscan do
       if Enum.empty?(tokens) do
         token_info
       else
-        Map.put(token_info, :tokens, tokens)
+        token_info
+        |> Map.put(:tokens, Enum.uniq(tokens))
       end
     end)
   end
