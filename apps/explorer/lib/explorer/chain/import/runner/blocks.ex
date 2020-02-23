@@ -424,14 +424,13 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
         select: %{
           address_hash: address_token_balance.address_hash,
           token_contract_address_hash: address_token_balance.token_contract_address_hash,
-          block_number: max(address_token_balance.block_number),
-          token_id: address_token_balance.token_id
+          block_number: max(address_token_balance.block_number)
         },
         group_by: [
           address_token_balance.address_hash,
-          address_token_balance.token_contract_address_hash,
-          address_token_balance.token_id
-        ]
+          address_token_balance.token_contract_address_hash
+        ],
+        distinct: [address_token_balance.address_hash, address_token_balance.token_contract_address_hash]
       )
 
     final_query =
@@ -459,7 +458,6 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
           address_hash: new_current_token_balance.address_hash,
           token_contract_address_hash: new_current_token_balance.token_contract_address_hash,
           block_number: new_current_token_balance.block_number,
-          token_id: new_current_token_balance.token_id,
           value: address_token_balance.value,
           inserted_at: over(min(address_token_balance.inserted_at), :w),
           updated_at: over(max(address_token_balance.updated_at), :w)
@@ -472,8 +470,6 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
     ordered_current_token_balance =
       new_current_token_balance_query
       |> repo.all()
-      |> Enum.group_by(fn current_token_balance -> current_token_balance.token_id end)
-      |> Enum.map(fn {_key, value} -> value |> List.first() |> Map.delete(:token_id) end)
       |> Enum.uniq()
       |> Enum.sort_by(&{&1.address_hash, &1.token_contract_address_hash})
 
