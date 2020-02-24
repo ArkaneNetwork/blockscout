@@ -355,7 +355,7 @@ defmodule Explorer.Etherscan do
                 }
               ])
             end
-            |> Map.drop([:balance, :token_id])
+            |> Map.drop([:balance, :token_id, :name, :symbol])
 
           _ ->
             token

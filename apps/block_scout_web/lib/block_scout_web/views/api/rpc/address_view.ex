@@ -170,9 +170,7 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
 
   defp prepare_token(token) do
     result = %{
-      "name" => token.name,
       "decimals" => to_string(token.decimals),
-      "symbol" => token.symbol,
       "type" => token.type
     }
 
@@ -186,6 +184,20 @@ defmodule BlockScoutWeb.API.RPC.AddressView do
     result =
       if Map.get(token, :balance) do
         Map.put(result, :balance, to_string(token.balance))
+      else
+        result
+      end
+
+    result =
+      if Map.get(token, :symbol) do
+        Map.put(result, :symbol, token.symbol)
+      else
+        result
+      end
+
+    result =
+      if Map.get(token, :name) do
+        Map.put(result, :name, token.name)
       else
         result
       end
