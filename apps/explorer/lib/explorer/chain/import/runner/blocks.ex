@@ -470,7 +470,9 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
     ordered_current_token_balance =
       new_current_token_balance_query
       |> repo.all()
-      |> Enum.uniq()
+      |> Enum.uniq_by(fn %{address_hash: address_hash, token_contract_address_hash: token_contract_address_hash} ->
+        {address_hash, token_contract_address_hash}
+      end)
       |> Enum.sort_by(&{&1.address_hash, &1.token_contract_address_hash})
 
     {_total, result} =
