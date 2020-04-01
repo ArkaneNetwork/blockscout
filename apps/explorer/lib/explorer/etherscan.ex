@@ -307,6 +307,7 @@ defmodule Explorer.Etherscan do
         where: tb.address_hash == ^address_hash,
         distinct: [:token_contract_address_hash, :token_id],
         order_by: [desc: :block_number],
+        where: not is_nil(tb.value),
         select: %{
           balance: tb.value,
           contract_address_hash: tb.token_contract_address_hash,
