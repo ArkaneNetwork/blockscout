@@ -426,7 +426,11 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
           token_contract_address_hash: address_token_balance.token_contract_address_hash,
           block_number: max(address_token_balance.block_number)
         },
-        group_by: [address_token_balance.address_hash, address_token_balance.token_contract_address_hash]
+        group_by: [
+          address_token_balance.address_hash,
+          address_token_balance.token_contract_address_hash
+        ],
+        distinct: [address_token_balance.address_hash, address_token_balance.token_contract_address_hash]
       )
 
     final_query =
@@ -466,15 +470,17 @@ defmodule Explorer.Chain.Import.Runner.Blocks do
     ordered_current_token_balance =
       new_current_token_balance_query
       |> repo.all()
-      # Enforce CurrentTokenBalance ShareLocks order (see docs: sharelocks.md)
+      |> Enum.uniq_by(fn %{address_hash: address_hash, token_contract_address_hash: token_contract_address_hash} ->
+        {address_hash, token_contract_address_hash}
+      end)
       |> Enum.sort_by(&{&1.address_hash, &1.token_contract_address_hash})
 
     {_total, result} =
       repo.insert_all(
         Address.CurrentTokenBalance,
         ordered_current_token_balance,
-        # No `ON CONFLICT` because `delete_address_current_token_balances`
-        # should have removed any conflicts.
+        on_conflict: :replace_all,
+        conflict_target: [:address_hash, :token_contract_address_hash],
         returning: [:address_hash, :token_contract_address_hash, :block_number, :value],
         timeout: timeout
       )

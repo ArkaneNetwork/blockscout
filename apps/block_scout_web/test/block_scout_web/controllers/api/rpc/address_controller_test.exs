@@ -2176,6 +2176,40 @@ defmodule BlockScoutWeb.API.RPC.AddressControllerTest do
       assert :ok = ExJsonSchema.Validator.validate(tokenlist_schema(), response)
     end
 
+    test "return ERC721 token instances", %{conn: conn} do
+      address = insert(:address)
+      erc721_token = insert(:token, type: "ERC-721")
+
+      token_balance_details = %{
+        address: address,
+        token_contract_address_hash: erc721_token.contract_address.hash,
+        block_number: 2,
+        value: 1
+      }
+
+      insert(:token_balance, token_balance_details) |> Repo.preload(:token)
+
+      insert(:token_transfer,
+        token_id: 5,
+        token_contract_address: erc721_token.contract_address,
+        to_address: address,
+        transaction: insert(:transaction)
+      )
+
+      params = %{
+        "module" => "account",
+        "action" => "tokenlist",
+        "address" => to_string(address.hash)
+      }
+
+      assert response =
+               conn
+               |> get("/api", params)
+               |> json_response(200)
+
+      assert List.first(response["result"])["tokens"] == [%{"balance" => 1, "fungible" => false, "token_id" => "5"}]
+    end
+
     test "with an invalid address hash", %{conn: conn} do
       params = %{
         "module" => "account",

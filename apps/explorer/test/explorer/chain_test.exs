@@ -4857,6 +4857,78 @@ defmodule Explorer.ChainTest do
     end
   end
 
+  describe "find_erc721_token_instances/3" do
+    test "finds a token instance when there are no from token transfers with the same token_id" do
+      address = insert(:address)
+      contract_address = insert(:address)
+
+      in_tt =
+        insert(:token_transfer,
+          to_address: address,
+          token_contract_address: contract_address,
+          token_id: 5,
+          transaction: insert(:transaction)
+        )
+
+      [result] = Chain.find_erc721_token_instances(address.hash, contract_address.hash, 1)
+
+      assert in_tt.token_contract_address_hash == result.token_contract_address_hash
+      assert in_tt.transaction_hash == result.transaction_hash
+      assert in_tt.log_index == result.log_index
+    end
+
+    test "finds a token instance when there is from token transfers with the same token_id" do
+      address = insert(:address)
+      contract_address = insert(:address)
+
+      in_tt =
+        insert(:token_transfer,
+          to_address: address,
+          token_contract_address: contract_address,
+          token_id: 5,
+          transaction: insert(:transaction),
+          block_number: 5
+        )
+
+      insert(:token_transfer,
+        from_address: address,
+        token_contract_address: contract_address,
+        token_id: 5,
+        transaction: insert(:transaction),
+        block_number: 4
+      )
+
+      [result] = Chain.find_erc721_token_instances(address.hash, contract_address.hash, 1)
+
+      assert in_tt.token_contract_address_hash == result.token_contract_address_hash
+      assert in_tt.transaction_hash == result.transaction_hash
+      assert in_tt.log_index == result.log_index
+    end
+
+    test "doesn't find a token transfer if from token transfer's block_number > to token transfer's block_number" do
+      address = insert(:address)
+      contract_address = insert(:address)
+
+      insert(:token_transfer,
+        to_address: address,
+        token_contract_address: contract_address,
+        token_id: 5,
+        transaction: insert(:transaction),
+        block_number: 4
+      )
+
+      insert(:token_transfer,
+        from_address: address,
+        token_contract_address: contract_address,
+        token_id: 5,
+        transaction: insert(:transaction),
+        block_number: 5
+      )
+
+      assert [] = Chain.find_erc721_token_instances(address.hash, contract_address.hash, 1)
+    end
+  end
+
   describe "transaction_token_transfer_type/1" do
     test "detects erc721 token transfer" do
       from_address_hash = "0x7a30272c902563b712245696f0a81c5a0e45ddc8"

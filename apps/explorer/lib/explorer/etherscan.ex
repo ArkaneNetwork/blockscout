@@ -3,12 +3,16 @@ defmodule Explorer.Etherscan do
   The etherscan context.
   """
 
+  use Bitwise
+
   import Ecto.Query, only: [from: 2, where: 3, or_where: 3, union: 2, subquery: 1]
 
   alias Explorer.Etherscan.Logs
   alias Explorer.{Chain, Repo}
   alias Explorer.Chain.Address.TokenBalance
   alias Explorer.Chain.{Block, Hash, InternalTransaction, TokenTransfer, Transaction}
+
+  @nf_bit 1 <<< 255
 
   @default_options %{
     order_by_direction: :desc,
@@ -301,19 +305,95 @@ defmodule Explorer.Etherscan do
         tb in TokenBalance,
         inner_join: t in assoc(tb, :token),
         where: tb.address_hash == ^address_hash,
-        distinct: :token_contract_address_hash,
+        distinct: [:token_contract_address_hash, :token_id],
         order_by: [desc: :block_number],
+        where: not is_nil(tb.value),
         select: %{
           balance: tb.value,
           contract_address_hash: tb.token_contract_address_hash,
           name: t.name,
           decimals: t.decimals,
           symbol: t.symbol,
-          type: t.type
+          type: t.type,
+          token_id: tb.token_id
         }
       )
 
-    Repo.all(query)
+    query
+    |> Repo.all()
+    |> Enum.map(fn %{type: type, balance: balance, contract_address_hash: token_hash} = token ->
+      Task.async(fn ->
+        case type do
+          "ERC-721" ->
+            token_instances =
+              address_hash
+              |> Chain.find_erc721_token_instances(token_hash, Decimal.to_integer(balance))
+              |> Enum.map(fn %{token_id: token_id} ->
+                %{
+                  token_id: token_id,
+                  fungible: false,
+                  balance: "1"
+                }
+              end)
+
+            Map.put(token, :tokens, token_instances) |> Map.drop([:balance])
+
+          "ERC-1155" ->
+            if (Decimal.to_integer(token.token_id) &&& @nf_bit) == 0 do
+              Map.put(token, :tokens, [
+                %{
+                  token_id: token.token_id,
+                  fungible: true,
+                  balance: token.balance
+                }
+              ])
+            else
+              Map.put(token, :tokens, [
+                %{
+                  token_id: token.token_id,
+                  fungible: false,
+                  balance: token.balance
+                }
+              ])
+            end
+            |> Map.drop([:balance, :token_id, :name, :symbol])
+
+          _ ->
+            token
+        end
+      end)
+    end)
+    |> Task.yield_many(:timer.seconds(60))
+    |> Enum.map(fn {_task, res} ->
+      case res do
+        {:ok, result} ->
+          result
+
+        {:exit, reason} ->
+          raise "Query fetching token instances terminated: #{inspect(reason)}"
+
+        nil ->
+          raise "Query fetching token instances timed out."
+      end
+    end)
+    |> Enum.group_by(fn balance ->
+      balance.contract_address_hash
+    end)
+    |> Enum.map(fn {_key, values} ->
+      token_info = Enum.at(values, 0)
+
+      tokens =
+        Enum.reduce(values, [], fn value, acc ->
+          (value[:tokens] || []) ++ acc
+        end)
+
+      if Enum.empty?(tokens) do
+        token_info
+      else
+        token_info
+        |> Map.put(:tokens, Enum.uniq(tokens))
+      end
+    end)
   end
 
   @transaction_fields ~w(

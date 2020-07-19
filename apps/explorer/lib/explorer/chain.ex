@@ -3682,6 +3682,33 @@ defmodule Explorer.Chain do
     Repo.one!(query)
   end
 
+  @spec find_erc721_token_instances(Hash.Address.t(), Hash.Address.t(), integer()) :: [TokenTransfer.t()]
+  def find_erc721_token_instances(address_hash, token_hash, value) do
+    query1 =
+      from(to_tt in TokenTransfer,
+        where: to_tt.token_contract_address_hash == ^token_hash and to_tt.to_address_hash == ^address_hash,
+        order_by: [desc: to_tt.block_number],
+        distinct: :token_id
+      )
+
+    query2 =
+      from(from_tt in TokenTransfer,
+        where: from_tt.token_contract_address_hash == ^token_hash and from_tt.from_address_hash == ^address_hash,
+        order_by: [desc: from_tt.block_number],
+        distinct: :token_id
+      )
+
+    query =
+      from(to_tt in query1,
+        left_join: from_tt in subquery(query2),
+        on: to_tt.token_id == from_tt.token_id,
+        where: to_tt.block_number > from_tt.block_number or is_nil(from_tt.token_id),
+        limit: ^value
+      )
+
+    Repo.all(query)
+  end
+
   @spec address_to_unique_tokens(Hash.Address.t(), [paging_options]) :: [TokenTransfer.t()]
   def address_to_unique_tokens(contract_address_hash, options \\ []) do
     paging_options = Keyword.get(options, :paging_options, @default_paging_options)
