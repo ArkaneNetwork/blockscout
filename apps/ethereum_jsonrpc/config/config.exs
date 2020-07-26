@@ -2,12 +2,12 @@ use Mix.Config
 
 config :ethereum_jsonrpc, EthereumJSONRPC.RequestCoordinator,
   rolling_window_opts: [
-    window_count: 6,
-    duration: :timer.minutes(2),
+    window_count: 12,
+    duration: :timer.minutes(1),
     table: EthereumJSONRPC.RequestCoordinator.TimeoutCounter
   ],
-  wait_per_timeout: :timer.seconds(40),
-  max_jitter: :timer.seconds(4)
+  wait_per_timeout: :timer.seconds(20),
+  max_jitter: :timer.seconds(2)
 
 config :ethereum_jsonrpc,
   rpc_transport: if(System.get_env("ETHEREUM_JSONRPC_JSON_RPC_TRANSPORT", "http") == "http", do: :http, else: :ipc),
