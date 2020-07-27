@@ -11,7 +11,7 @@ config :indexer,
     transport_options: [
       http: EthereumJSONRPC.HTTP.HTTPoison,
       url: System.get_env("ETHEREUM_JSONRPC_HTTP_URL") || "https://mainnet.infura.io/8lTvJTKmHPCHazkneJsY",
-      http_options: [recv_timeout: :timer.minutes(10), timeout: :timer.minutes(10), hackney: [pool: :ethereum_jsonrpc]]
+      http_options: [recv_timeout: :timer.minutes(20), timeout: :timer.minutes(20), hackney: [pool: :ethereum_jsonrpc]]
     ],
     variant: EthereumJSONRPC.Geth
   ],
