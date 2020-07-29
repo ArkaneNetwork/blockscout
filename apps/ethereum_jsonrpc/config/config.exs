@@ -3,7 +3,7 @@ use Mix.Config
 config :ethereum_jsonrpc, EthereumJSONRPC.RequestCoordinator,
   rolling_window_opts: [
     window_count: 12,
-    duration: :timer.minutes(2),
+    duration: :timer.minutes(3),
     table: EthereumJSONRPC.RequestCoordinator.TimeoutCounter
   ],
   wait_per_timeout: :timer.seconds(30),
